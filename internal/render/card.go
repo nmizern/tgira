@@ -23,8 +23,8 @@ func Card(b domain.Board, t domain.Task, u Users, l i18n.Strings) string {
 	}
 
 	var who string
-	if t.AssigneeID != 0 {
-		who = "👤 " + esc(u.Display(t.AssigneeID))
+	if name := assignee(t, u); name != "" {
+		who = "👤 " + esc(name)
 	}
 	if meta := join(who, tags(t)); meta != "" {
 		lines = append(lines, meta)

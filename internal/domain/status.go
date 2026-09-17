@@ -65,3 +65,17 @@ func (u User) Display() string {
 	}
 	return "id:" + strconv.FormatInt(u.ID, 10)
 }
+
+// Assigned reports whether somebody owns the task. A task can be assigned by
+// handle before the bot has ever seen that account.
+func (t Task) Assigned() bool {
+	return t.AssigneeID != 0 || t.AssigneeName != ""
+}
+
+// AssigneeHandle is the name to show when the account is still unknown.
+func (t Task) AssigneeHandle() string {
+	if t.AssigneeName == "" {
+		return ""
+	}
+	return "@" + t.AssigneeName
+}

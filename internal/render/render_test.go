@@ -80,6 +80,10 @@ func TestCard(t *testing.T) {
 	lowPriority := task(15, "Обновить README")
 	lowPriority.Priority = domain.PriorityLow
 
+	// assigned to somebody the bot has not met yet
+	byHandle := task(16, "Написать миграцию")
+	byHandle.AssigneeName = "ivan"
+
 	cases := map[string]domain.Task{
 		"card_doing_full":   full,
 		"card_todo_plain":   task(7, "Разобраться с логами nginx"),
@@ -88,6 +92,7 @@ func TestCard(t *testing.T) {
 		"card_no_message":   unposted,
 		"card_escaped":      escaped,
 		"card_low_priority": lowPriority,
+		"card_by_handle":    byHandle,
 	}
 
 	for name, tk := range cases {

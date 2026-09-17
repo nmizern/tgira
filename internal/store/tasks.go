@@ -12,7 +12,7 @@ import (
 )
 
 const taskColumns = `id, board_id, num, title, description, raw_text, status, priority,
-	author_id, assignee_id, card_msg_id, source_msg_id, media_kind, media_file_id,
+	author_id, assignee_id, assignee_name, card_msg_id, source_msg_id, media_kind, media_file_id,
 	created_at, updated_at, closed_at, deleted_at`
 
 // Filter narrows a task listing. BoardID is required.
@@ -53,11 +53,11 @@ func (s *Store) CreateTask(ctx context.Context, t domain.Task) (domain.Task, err
 
 		res, err := tx.ExecContext(ctx, `
 			INSERT INTO tasks (board_id, num, title, description, raw_text, status, priority,
-				author_id, assignee_id, card_msg_id, source_msg_id, media_kind, media_file_id,
+				author_id, assignee_id, assignee_name, card_msg_id, source_msg_id, media_kind, media_file_id,
 				created_at, updated_at)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 			t.BoardID, t.Num, t.Title, t.Description, t.RawText, string(t.Status), int(t.Priority),
-			t.AuthorID, t.AssigneeID, t.CardMsgID, t.SourceMsgID, t.Media.Kind, t.Media.FileID,
+			t.AuthorID, t.AssigneeID, t.AssigneeName, t.CardMsgID, t.SourceMsgID, t.Media.Kind, t.Media.FileID,
 			formatTime(t.CreatedAt), formatTime(t.UpdatedAt))
 		if err != nil {
 			return fmt.Errorf("insert task: %w", err)
@@ -129,7 +129,7 @@ func (s *Store) UpdateStatus(ctx context.Context, taskID int64, st domain.Status
 
 // UpdateAssignee sets the assignee; zero means nobody.
 func (s *Store) UpdateAssignee(ctx context.Context, taskID, userID int64) error {
-	return s.exec(ctx, `UPDATE tasks SET assignee_id = ?, updated_at = ? WHERE id = ?`,
+	return s.exec(ctx, `UPDATE tasks SET assignee_id = ?, assignee_name = '', updated_at = ? WHERE id = ?`,
 		userID, formatTime(time.Now()), taskID)
 }
 
@@ -260,7 +260,7 @@ func scanTask(row scanner) (domain.Task, error) {
 		closedAt, deletedAt  sql.NullString
 	)
 	err := row.Scan(&t.ID, &t.BoardID, &t.Num, &t.Title, &t.Description, &t.RawText, &status, &priority,
-		&t.AuthorID, &t.AssigneeID, &t.CardMsgID, &t.SourceMsgID, &t.Media.Kind, &t.Media.FileID,
+		&t.AuthorID, &t.AssigneeID, &t.AssigneeName, &t.CardMsgID, &t.SourceMsgID, &t.Media.Kind, &t.Media.FileID,
 		&createdAt, &updatedAt, &closedAt, &deletedAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return domain.Task{}, ErrNotFound

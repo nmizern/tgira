@@ -37,24 +37,25 @@ func (m Media) Empty() bool { return m.Kind == "" || m.FileID == "" }
 
 // Task is a single ticket on a board.
 type Task struct {
-	ID          int64
-	BoardID     int64
-	Num         int64
-	Title       string
-	Description string
-	RawText     string
-	Status      Status
-	Priority    Priority
-	AuthorID    int64
-	AssigneeID  int64
-	CardMsgID   int64
-	SourceMsgID int64
-	Media       Media
-	Tags        []string
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
-	ClosedAt    *time.Time
-	DeletedAt   *time.Time
+	ID           int64
+	BoardID      int64
+	Num          int64
+	Title        string
+	Description  string
+	RawText      string
+	Status       Status
+	Priority     Priority
+	AuthorID     int64
+	AssigneeID   int64
+	AssigneeName string
+	CardMsgID    int64
+	SourceMsgID  int64
+	Media        Media
+	Tags         []string
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+	ClosedAt     *time.Time
+	DeletedAt    *time.Time
 }
 
 // Board is one forum topic the bot watches.
