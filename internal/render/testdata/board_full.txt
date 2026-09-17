@@ -1,0 +1,9 @@
+📋 <b>Tasks</b> · 4 open
+
+<b>doing</b>
+🔴 <a href="https://t.me/c/1234567890/42/1012">TG-12</a> · Редирект после логина · @ivan
+🟡 <a href="https://t.me/c/1234567890/42/1009">TG-9</a> · Метрики · @ivan
+
+<b>to do</b>
+🟠 <a href="https://t.me/c/1234567890/42/1014">TG-14</a> · Починить деплой · @mikita
+⚪ <a href="https://t.me/c/1234567890/42/1013">TG-13</a> · Обновить README
