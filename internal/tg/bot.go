@@ -31,6 +31,7 @@ type Bot struct {
 	texts  i18n.Strings
 	log    *slog.Logger
 	boards map[threadKey]domain.Board
+	byID   map[int64]domain.Board
 	ctx    context.Context
 	now    func() time.Time
 	sleep  func(time.Duration)
@@ -72,12 +73,14 @@ func newBot(cfg config.Config, st *store.Store, log *slog.Logger, api *tele.Bot)
 		texts:  i18n.Get(cfg.Locale),
 		log:    log,
 		boards: map[threadKey]domain.Board{},
+		byID:   map[int64]domain.Board{},
 		ctx:    context.Background(),
 		now:    time.Now,
 		sleep:  time.Sleep,
 	}
 	b.api.Handle(tele.OnText, b.onMessage)
 	b.api.Handle(tele.OnMedia, b.onMessage)
+	b.api.Handle(&tele.InlineButton{Unique: render.StatusAction}, b.onStatusButton)
 	return b
 }
 
@@ -115,6 +118,7 @@ func (b *Bot) syncBoards(ctx context.Context) error {
 	}
 	for _, bd := range boards {
 		b.boards[threadKey{chat: bd.ChatID, thread: bd.ThreadID}] = bd
+		b.byID[bd.ID] = bd
 	}
 	return nil
 }
