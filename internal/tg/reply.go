@@ -88,3 +88,33 @@ func (b *Bot) deleteMessage(chatID, msgID int64) error {
 		return err
 	})
 }
+
+// notify says something short in the board's thread and takes it back again,
+// so the topic does not fill up with service messages.
+func (b *Bot) notify(board domain.Board, text string) {
+	var sent *tele.Message
+	err := b.call("sendMessage", func() error {
+		msg, err := b.api.Send(tele.ChatID(board.ChatID), text, &tele.SendOptions{
+			ThreadID:              int(board.ThreadID),
+			ParseMode:             tele.ModeHTML,
+			DisableWebPagePreview: true,
+			DisableNotification:   true,
+		})
+		sent = msg
+		return err
+	})
+	if err != nil {
+		b.log.Warn("could not send note", "error", err)
+		return
+	}
+
+	ttl := b.cfg.UI.EphemeralTTL()
+	if ttl <= 0 || sent == nil {
+		return
+	}
+	b.after(ttl, func() {
+		if err := b.deleteMessage(board.ChatID, int64(sent.ID)); err != nil {
+			b.log.Warn("could not remove note", "error", err)
+		}
+	})
+}

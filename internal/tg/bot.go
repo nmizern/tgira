@@ -35,6 +35,7 @@ type Bot struct {
 	ctx    context.Context
 	now    func() time.Time
 	sleep  func(time.Duration)
+	after  func(time.Duration, func())
 }
 
 // New dials Telegram and wires the handlers.
@@ -77,6 +78,7 @@ func newBot(cfg config.Config, st *store.Store, log *slog.Logger, api *tele.Bot)
 		ctx:    context.Background(),
 		now:    time.Now,
 		sleep:  time.Sleep,
+		after:  func(d time.Duration, f func()) { time.AfterFunc(d, f) },
 	}
 	b.api.Handle(tele.OnText, b.onMessage)
 	b.api.Handle(tele.OnMedia, b.onMessage)
@@ -126,7 +128,13 @@ func (b *Bot) syncBoards(ctx context.Context) error {
 // intercept handles what telebot's router cannot, and reports whether the
 // update should carry on to it.
 func (b *Bot) intercept(u *tele.Update) bool {
-	return u.MessageReaction == nil
+	if u.MessageReaction == nil {
+		return true
+	}
+	if err := b.onReaction(u.MessageReaction); err != nil {
+		b.log.Error("reaction failed", "error", err)
+	}
+	return false
 }
 
 // Process runs one update through the same path the poller uses.
