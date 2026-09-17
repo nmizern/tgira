@@ -1,0 +1,15 @@
+services:
+  tgira:
+    build: .
+    image: tgira
+    restart: unless-stopped
+    environment:
+      TGIRA_TOKEN: ${TGIRA_TOKEN:?set TGIRA_TOKEN in .env}
+      TGIRA_DB_PATH: /data/tgira.db
+    volumes:
+      - ./config.yaml:/etc/tgira/config.yaml:ro
+      - tgira-data:/data
+    mem_limit: 192m
+
+volumes:
+  tgira-data:
