@@ -4,8 +4,9 @@ db_path: ./tgira.db       # TGIRA_DB_PATH
 locale: en                # TGIRA_LOCALE: en | ru
 log_level: info           # TGIRA_LOG_LEVEL: debug | info | warn | error
 
-# Every board is one forum topic the bot watches.
-# Run /whereami in the topic to learn chat_id and thread_id.
+# Every board is one forum topic the bot watches. Leave the list empty on a
+# fresh install: the bot then answers /whereami and nothing else, which is how
+# you learn the two numbers below.
 boards:
   - code: TG
     title: Tasks

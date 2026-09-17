@@ -227,3 +227,24 @@ func TestPrivateAnswersStay(t *testing.T) {
 	require.NotEmpty(t, api.calls("sendMessage"))
 	require.Empty(t, api.calls("deleteMessage"))
 }
+
+// whereami is read while editing the config, so its answer must not vanish,
+// and it is the one command that works before any board exists.
+func TestWhereAmIAnswerStays(t *testing.T) {
+	b, api, _, _ := newTestBot(t)
+
+	command(b, 890, "/whereami", author())
+
+	require.NotEmpty(t, api.calls("sendMessage"))
+	require.Empty(t, api.calls("deleteMessage"))
+}
+
+func TestWhereAmIWorksWithoutAnyBoard(t *testing.T) {
+	b, api, _, _ := newTestBot(t)
+	b.boards = nil
+	b.byID = nil
+
+	command(b, 891, "/whereami", author())
+
+	require.Contains(t, api.last(t, "sendMessage").str("text"), "chat_id: -1001234567890")
+}

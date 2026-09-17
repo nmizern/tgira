@@ -163,13 +163,12 @@ type thread struct {
 	threadID int64
 }
 
-// Validate reports the first problem that would make the bot misbehave at runtime.
+// Validate reports the first problem that would make the bot misbehave at
+// runtime. A config without boards is allowed on purpose: that is how a fresh
+// install starts, before /whereami has told anyone which topic to watch.
 func (c Config) Validate() error {
 	if c.Token == "" {
 		return errors.New("token is required")
-	}
-	if len(c.Boards) == 0 {
-		return errors.New("at least one board is required")
 	}
 	if !oneOf(c.Locale, "en", "ru") {
 		return fmt.Errorf("locale: unknown value %q", c.Locale)

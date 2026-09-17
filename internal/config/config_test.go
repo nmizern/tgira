@@ -94,7 +94,8 @@ func TestValidate(t *testing.T) {
 	}{
 		{"ok", func(*Config) {}, ""},
 		{"no token", func(c *Config) { c.Token = "" }, "token"},
-		{"no boards", func(c *Config) { c.Boards = nil }, "board"},
+		// a fresh install has no boards yet; /whereami still has to answer
+		{"no boards yet", func(c *Config) { c.Boards = nil }, ""},
 		{"lowercase code", func(c *Config) { c.Boards[0].Code = "tg" }, "code"},
 		{"code too long", func(c *Config) { c.Boards[0].Code = "VERYLONGCODE" }, "code"},
 		{"code with dash", func(c *Config) { c.Boards[0].Code = "T-G" }, "code"},
