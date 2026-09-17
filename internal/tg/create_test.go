@@ -46,6 +46,7 @@ func newTestBot(t *testing.T) (*Bot, *fakeAPI, *store.Store, domain.Board) {
 	b := newBot(cfg, st, slog.New(slog.NewTextHandler(io.Discard, nil)), teleBot)
 	b.now = func() time.Time { return day }
 	b.sleep = func(time.Duration) {}
+	b.after = func(_ time.Duration, f func()) { f() }
 	b.ctx = t.Context()
 	require.NoError(t, b.syncBoards(t.Context()))
 
