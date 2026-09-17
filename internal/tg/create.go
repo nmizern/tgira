@@ -97,6 +97,8 @@ func (b *Bot) createTask(ctx context.Context, board domain.Board, m *tele.Messag
 		b.log.Warn("could not link card to itself", "task", task.Key(board.Code), "error", err)
 	}
 
+	b.touchBoard(board.ID)
+
 	if keepSource {
 		return nil
 	}

@@ -21,8 +21,21 @@ const (
 
 var day = time.Date(2026, 9, 17, 12, 0, 0, 0, time.UTC)
 
+// pending holds board redraws until a test asks for them, so that a board
+// refresh never lands in the middle of another assertion.
+var pending []func()
+
+func flushPending() {
+	queued := pending
+	pending = nil
+	for _, f := range queued {
+		f()
+	}
+}
+
 func newTestBot(t *testing.T) (*Bot, *fakeAPI, *store.Store, domain.Board) {
 	t.Helper()
+	pending = nil
 
 	st, err := store.Open(filepath.Join(t.TempDir(), "test.db"))
 	require.NoError(t, err)
@@ -47,6 +60,7 @@ func newTestBot(t *testing.T) (*Bot, *fakeAPI, *store.Store, domain.Board) {
 	b.now = func() time.Time { return day }
 	b.sleep = func(time.Duration) {}
 	b.after = func(_ time.Duration, f func()) { f() }
+	b.schedule = func(_ time.Duration, f func()) { pending = append(pending, f) }
 	b.ctx = t.Context()
 	require.NoError(t, b.syncBoards(t.Context()))
 

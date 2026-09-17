@@ -2,7 +2,9 @@ package tg
 
 import (
 	"errors"
+	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/nmizern/tgira/internal/domain"
@@ -46,11 +48,33 @@ func (b *Bot) call(what string, fn func() error) error {
 // retriable reports whether trying the same call again could work. Telegram's
 // own 4xx answers will not change; anything else might.
 func retriable(err error) bool {
+	_, code := apiFailure(err)
+	if code == 0 {
+		return true // network trouble rather than an answer from Telegram
+	}
+	return code >= 500
+}
+
+var codeInText = regexp.MustCompile(`\((\d{3})\)$`)
+
+// apiFailure pulls the description and the status code out of a Telegram
+// error. telebot only builds a typed error for descriptions it recognises;
+// every other one arrives as plain text like
+// "telegram: Bad Request: message to edit not found (400)".
+func apiFailure(err error) (string, int) {
 	var apiErr *tele.Error
 	if errors.As(err, &apiErr) {
-		return apiErr.Code >= 500
+		return strings.ToLower(apiErr.Description), apiErr.Code
 	}
-	return true
+
+	text := strings.ToLower(err.Error())
+	if match := codeInText.FindStringSubmatch(text); match != nil {
+		code, convErr := strconv.Atoi(match[1])
+		if convErr == nil {
+			return text, code
+		}
+	}
+	return text, 0
 }
 
 func msgRef(chatID, msgID int64) tele.StoredMessage {

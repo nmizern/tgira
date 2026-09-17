@@ -73,6 +73,12 @@ func (s *Store) BoardByChat(ctx context.Context, chatID, threadID int64) (domain
 	return scanBoard(row)
 }
 
+// BoardByID loads a board by its internal id.
+func (s *Store) BoardByID(ctx context.Context, id int64) (domain.Board, error) {
+	row := s.db.QueryRowContext(ctx, `SELECT `+boardColumns+` FROM boards WHERE id = ?`, id)
+	return scanBoard(row)
+}
+
 // BoardByCode finds a board by its short code, such as "TG".
 func (s *Store) BoardByCode(ctx context.Context, code string) (domain.Board, error) {
 	row := s.db.QueryRowContext(ctx, `SELECT `+boardColumns+` FROM boards WHERE code = ?`, code)
