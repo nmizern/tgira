@@ -1,0 +1,4 @@
+🔴 <a href="https://t.me/c/1234567890/42/1012">TG-12</a> · <i>doing</i>
+<b>Поправить редирект после логина через Google</b>
+Валится только в Safari
+👤 @ivan · #backend #auth
