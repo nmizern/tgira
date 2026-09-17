@@ -31,6 +31,7 @@ type fakeAPI struct {
 	recorded []apiCall
 	failures map[string]string
 	nextID   int
+	lastMsg  int
 }
 
 func newFakeAPI(t *testing.T) *fakeAPI {
@@ -65,9 +66,11 @@ func (f *fakeAPI) serve(w http.ResponseWriter, r *http.Request) {
 			writeJSON(w, okResult(messageResult(existing, params)))
 			return
 		}
+		f.remember(id)
 		writeJSON(w, okResult(messageResult(itoa(id), params)))
 
 	case "copyMessage":
+		f.remember(id)
 		writeJSON(w, okResult(map[string]any{"message_id": id}))
 
 	default:
@@ -134,4 +137,17 @@ func (f *fakeAPI) last(t *testing.T, method string) apiCall {
 		t.Fatalf("no %s call was made; got %v", method, f.methods())
 	}
 	return calls[len(calls)-1]
+}
+
+func (f *fakeAPI) remember(id int) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.lastMsg = id
+}
+
+// lastMessageID is the id the fake handed out for the most recent new message.
+func (f *fakeAPI) lastMessageID() int {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.lastMsg
 }

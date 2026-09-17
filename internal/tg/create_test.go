@@ -161,7 +161,8 @@ func TestCommandsAreNotTasks(t *testing.T) {
 	tasks, err := st.Tasks(t.Context(), store.Filter{BoardID: board.ID})
 	require.NoError(t, err)
 	require.Empty(t, tasks)
-	require.Empty(t, api.methods())
+	// it was answered as a command, not turned into work
+	require.NotEmpty(t, api.calls("sendMessage"))
 }
 
 // A restarted bot re-reads updates it had already handled.

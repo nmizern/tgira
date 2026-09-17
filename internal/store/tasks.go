@@ -138,6 +138,13 @@ func (s *Store) UpdateAssignee(ctx context.Context, taskID, userID int64) error 
 		userID, formatTime(time.Now()), taskID)
 }
 
+// UpdateAssigneeHandle remembers a handle the bot cannot resolve to an
+// account yet. The person claims the task the moment they write anything.
+func (s *Store) UpdateAssigneeHandle(ctx context.Context, taskID int64, handle string) error {
+	return s.exec(ctx, `UPDATE tasks SET assignee_id = 0, assignee_name = ?, updated_at = ? WHERE id = ?`,
+		handle, formatTime(time.Now()), taskID)
+}
+
 // UpdatePriority sets the priority; zero means none.
 func (s *Store) UpdatePriority(ctx context.Context, taskID int64, p domain.Priority) error {
 	return s.exec(ctx, `UPDATE tasks SET priority = ?, updated_at = ? WHERE id = ?`,

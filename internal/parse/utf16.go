@@ -91,3 +91,8 @@ func clamp(v, limit int) int {
 	}
 	return v
 }
+
+// Len16 is the length of a string the way Telegram counts entity offsets.
+func Len16(s string) int {
+	return newText16(s).len()
+}
