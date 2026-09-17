@@ -15,15 +15,34 @@ const userColumns = `id, username, first_name, last_name, dm_chat_id, updated_at
 // UpsertUser remembers a Telegram account. It never clears the private chat
 // id, which is learned separately and only once.
 func (s *Store) UpsertUser(ctx context.Context, u domain.User) error {
-	return s.exec(ctx, `
-		INSERT INTO users (id, username, first_name, last_name, dm_chat_id, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?)
-		ON CONFLICT (id) DO UPDATE SET
-			username   = excluded.username,
-			first_name = excluded.first_name,
-			last_name  = excluded.last_name,
-			updated_at = excluded.updated_at`,
-		u.ID, u.Username, u.FirstName, u.LastName, u.DMChatID, formatTime(time.Now()))
+	return s.inTx(ctx, func(tx *sql.Tx) error {
+		_, err := tx.ExecContext(ctx, `
+			INSERT INTO users (id, username, first_name, last_name, dm_chat_id, updated_at)
+			VALUES (?, ?, ?, ?, ?, ?)
+			ON CONFLICT (id) DO UPDATE SET
+				username   = excluded.username,
+				first_name = excluded.first_name,
+				last_name  = excluded.last_name,
+				updated_at = excluded.updated_at`,
+			u.ID, u.Username, u.FirstName, u.LastName, u.DMChatID, formatTime(time.Now()))
+		if err != nil {
+			return fmt.Errorf("upsert user: %w", err)
+		}
+		if u.Username == "" {
+			return nil
+		}
+
+		// Tasks can be assigned by handle long before the account itself is
+		// known, so claim those the moment the person shows up.
+		_, err = tx.ExecContext(ctx, `
+			UPDATE tasks SET assignee_id = ?, assignee_name = ''
+			WHERE assignee_id = 0 AND assignee_name <> '' AND assignee_name = ? COLLATE NOCASE`,
+			u.ID, u.Username)
+		if err != nil {
+			return fmt.Errorf("adopt tasks of %s: %w", u.Username, err)
+		}
+		return nil
+	})
 }
 
 // SetDMChat records the private chat the bot can write to.

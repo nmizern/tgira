@@ -86,3 +86,16 @@ func TestAccess(t *testing.T) {
 	require.False(t, CanDelete(assigned, assignee))
 	require.False(t, CanDelete(unassigned, stranger))
 }
+
+func TestAssignedByHandle(t *testing.T) {
+	byHandle := Task{AuthorID: 1, AssigneeName: "ivan"}
+	require.True(t, byHandle.Assigned())
+	require.Equal(t, "@ivan", byHandle.AssigneeHandle())
+
+	// the handle owns the task even before the account is known
+	require.False(t, CanChangeStatus(byHandle, 3))
+	require.True(t, CanChangeStatus(byHandle, 1))
+
+	require.False(t, Task{AuthorID: 1}.Assigned())
+	require.Empty(t, Task{AuthorID: 1}.AssigneeHandle())
+}

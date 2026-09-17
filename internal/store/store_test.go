@@ -366,3 +366,33 @@ func TestStatsCountsCreatedAndClosed(t *testing.T) {
 	require.Equal(t, Stat{UserID: 100, Created: 1, Closed: 0}, byUser[100])
 	require.Equal(t, Stat{UserID: 200, Created: 1, Closed: 1}, byUser[200])
 }
+
+// A task can name somebody the bot has never seen; it must find its owner
+// the moment that person writes anything.
+func TestUpsertUserAdoptsTasksAssignedByHandle(t *testing.T) {
+	st := openStore(t)
+	ctx := t.Context()
+	b := seedBoard(t, st)
+
+	waiting := newTask(b, 1, "ждёт ивана")
+	waiting.AssigneeName = "Ivan"
+	created, err := st.CreateTask(ctx, waiting)
+	require.NoError(t, err)
+
+	other := newTask(b, 2, "чужая")
+	other.AssigneeName = "petr"
+	_, err = st.CreateTask(ctx, other)
+	require.NoError(t, err)
+
+	require.NoError(t, st.UpsertUser(ctx, domain.User{ID: 500, Username: "ivan"}))
+
+	got, err := st.TaskByNum(ctx, b.ID, created.Num)
+	require.NoError(t, err)
+	require.EqualValues(t, 500, got.AssigneeID)
+	require.Empty(t, got.AssigneeName)
+
+	untouched, err := st.TaskByNum(ctx, b.ID, 2)
+	require.NoError(t, err)
+	require.Zero(t, untouched.AssigneeID)
+	require.Equal(t, "petr", untouched.AssigneeName)
+}

@@ -75,10 +75,7 @@ func BoardText(b domain.Board, tasks []domain.Task, u Users, l i18n.Strings) str
 }
 
 func boardLine(b domain.Board, t domain.Task, u Users) string {
-	var who string
-	if t.AssigneeID != 0 {
-		who = esc(u.Display(t.AssigneeID))
-	}
+	who := esc(assignee(t, u))
 	return marker(t) + " " + key(b, t) + " · " + esc(shorten(t.Title)) + metaSuffix(who)
 }
 

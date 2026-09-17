@@ -29,6 +29,7 @@ CREATE TABLE tasks (
     priority      INTEGER NOT NULL DEFAULT 0,
     author_id     INTEGER NOT NULL,
     assignee_id   INTEGER NOT NULL DEFAULT 0,
+    assignee_name TEXT    NOT NULL DEFAULT '',
     card_msg_id   INTEGER NOT NULL DEFAULT 0,
     source_msg_id INTEGER NOT NULL,
     media_kind    TEXT    NOT NULL DEFAULT '',

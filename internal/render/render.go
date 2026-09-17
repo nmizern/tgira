@@ -77,3 +77,12 @@ func esc(s string) string {
 	s = strings.ReplaceAll(s, "<", "&lt;")
 	return strings.ReplaceAll(s, ">", "&gt;")
 }
+
+// assignee is the person shown on a card, by account when the bot knows it and
+// by the handle the author typed until then.
+func assignee(t domain.Task, u Users) string {
+	if t.AssigneeID != 0 {
+		return u.Display(t.AssigneeID)
+	}
+	return t.AssigneeHandle()
+}

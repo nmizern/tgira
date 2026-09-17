@@ -3,7 +3,7 @@ package domain
 // CanChangeStatus reports whether an actor may move a task. A task nobody owns
 // is up for grabs; an owned one belongs to its author and its assignee.
 func CanChangeStatus(t Task, actorID int64) bool {
-	if t.AssigneeID == 0 {
+	if !t.Assigned() {
 		return true
 	}
 	return actorID == t.AuthorID || actorID == t.AssigneeID
