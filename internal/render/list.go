@@ -78,3 +78,25 @@ func AssigneeOf(t domain.Task, u Users) string {
 	}
 	return "—"
 }
+
+// Stats renders the counters behind /stats.
+func Stats(b domain.Board, period string, rows []StatRow, l i18n.Strings) string {
+	head := "<b>" + esc(l.T(i18n.KeyStatsHeader, b.Title, period)) + "</b>"
+	if len(rows) == 0 {
+		return head + "\n" + esc(l.T(i18n.KeyNoTasks))
+	}
+
+	lines := make([]string, 0, len(rows)+1)
+	lines = append(lines, head)
+	for _, r := range rows {
+		lines = append(lines, esc(l.T(i18n.KeyStatsLine, r.Name, r.Created, r.Closed)))
+	}
+	return strings.Join(lines, "\n")
+}
+
+// StatRow is one person's numbers, already resolved to a name.
+type StatRow struct {
+	Name    string
+	Created int
+	Closed  int
+}
