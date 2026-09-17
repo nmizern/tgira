@@ -84,6 +84,11 @@ func (s *Store) CreateTask(ctx context.Context, t domain.Task) (domain.Task, err
 	return t, nil
 }
 
+// Task loads one task by its internal id.
+func (s *Store) Task(ctx context.Context, id int64) (domain.Task, error) {
+	return s.task(ctx, `id = ? AND deleted_at IS NULL`, id)
+}
+
 // TaskByCard finds the task a card message represents.
 func (s *Store) TaskByCard(ctx context.Context, boardID, cardMsgID int64) (domain.Task, error) {
 	return s.task(ctx, `board_id = ? AND card_msg_id = ? AND deleted_at IS NULL`, boardID, cardMsgID)
