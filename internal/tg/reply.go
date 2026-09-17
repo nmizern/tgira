@@ -147,17 +147,7 @@ func (b *Bot) notify(board domain.Board, text string) {
 // clear themselves away, so the topic stays a list of tasks; in a private
 // chat they stay, because there is nothing to keep tidy.
 func (b *Bot) answer(m *tele.Message, text string) error {
-	var sent *tele.Message
-	err := b.call("sendMessage", func() error {
-		msg, sendErr := b.api.Send(tele.ChatID(m.Chat.ID), text, &tele.SendOptions{
-			ThreadID:              m.ThreadID,
-			ParseMode:             tele.ModeHTML,
-			DisableWebPagePreview: true,
-			DisableNotification:   true,
-		})
-		sent = msg
-		return sendErr
-	})
+	sent, err := b.say0(m, text)
 	if err != nil {
 		return err
 	}
@@ -178,4 +168,25 @@ func (b *Bot) answer(m *tele.Message, text string) error {
 		}
 	})
 	return nil
+}
+
+// say replies and leaves the reply where it is.
+func (b *Bot) say(m *tele.Message, text string) error {
+	_, err := b.say0(m, text)
+	return err
+}
+
+func (b *Bot) say0(m *tele.Message, text string) (*tele.Message, error) {
+	var sent *tele.Message
+	err := b.call("sendMessage", func() error {
+		msg, sendErr := b.api.Send(tele.ChatID(m.Chat.ID), text, &tele.SendOptions{
+			ThreadID:              m.ThreadID,
+			ParseMode:             tele.ModeHTML,
+			DisableWebPagePreview: true,
+			DisableNotification:   true,
+		})
+		sent = msg
+		return sendErr
+	})
+	return sent, err
 }

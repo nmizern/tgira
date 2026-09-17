@@ -104,6 +104,11 @@ func (b *Bot) Start(ctx context.Context) error {
 		b.api.Stop()
 	}()
 
+	if len(b.boards) == 0 {
+		b.log.Warn("no boards configured: run /whereami in the topic you want to track, " +
+			"put the two numbers into the config and restart")
+	}
+
 	for id := range b.byID {
 		if err := b.flushBoard(ctx, id); err != nil {
 			b.log.Warn("could not draw board at startup", "error", err)

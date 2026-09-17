@@ -37,7 +37,9 @@ func (b *Bot) registerCommands() {
 // config up before any board exists.
 func (b *Bot) cmdWhereAmI(c tele.Context) error {
 	m := c.Message()
-	return b.answer(m, render.Where(m.Chat.ID, m.ThreadID, b.texts))
+	// This answer has to survive: it is read while editing the config, and it
+	// is the one command that works before any board exists.
+	return b.say(m, render.Where(m.Chat.ID, m.ThreadID, b.texts))
 }
 
 func (b *Bot) cmdHelp(c tele.Context) error {

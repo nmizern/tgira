@@ -128,8 +128,17 @@ into a card.
 
 ### 3. Find the topic
 
-Run `/whereami` in the topic you want to track. It answers with the two
-numbers the config needs.
+Start with no boards at all — `boards: []` — and run the bot. In that state it
+answers `/whereami` and nothing else. Send it in the topic you want to track
+and it replies with the two numbers the config needs:
+
+```
+Put these into the board config:
+chat_id: -1001234567890
+thread_id: 42
+```
+
+Put them under `boards`, restart, and the topic is live.
 
 ### 4. Run it
 
