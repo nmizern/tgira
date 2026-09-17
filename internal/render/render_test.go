@@ -156,3 +156,30 @@ func TestBoardText(t *testing.T) {
 	require.LessOrEqual(t, len([]rune(long)), 4096)
 	require.Contains(t, long, "and")
 }
+
+func TestListAndShow(t *testing.T) {
+	doing := task(12, "Редирект после логина")
+	doing.Status = domain.StatusDoing
+	doing.Priority = domain.PriorityHigh
+	doing.AssigneeID = 200
+
+	done := task(9, "Метрики")
+	done.Status = domain.StatusDone
+
+	golden(t, "list_mixed", List(board, []domain.Task{doing, done}, people, en))
+	golden(t, "list_empty", List(board, nil, people, en))
+
+	at := time.Date(2026, 9, 17, 12, 0, 0, 0, time.UTC)
+	events := []domain.Event{
+		{TaskID: 12, ActorID: 100, Kind: domain.EventCreated, To: domain.StatusTodo, CreatedAt: at},
+		{TaskID: 12, ActorID: 200, Kind: domain.EventAssign, CreatedAt: at.Add(time.Minute)},
+		{TaskID: 12, ActorID: 200, Kind: domain.EventStatus, From: domain.StatusTodo, To: domain.StatusDoing, CreatedAt: at.Add(2 * time.Minute)},
+	}
+	golden(t, "show_with_history", Show(board, doing, events, people, en))
+}
+
+func TestWhere(t *testing.T) {
+	require.Equal(t,
+		"Put these into the board config:\n<code>chat_id: -1001234567890</code>\n<code>thread_id: 42</code>",
+		Where(-1001234567890, 42, en))
+}

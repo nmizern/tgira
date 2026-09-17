@@ -142,3 +142,40 @@ func (b *Bot) notify(board domain.Board, text string) {
 		}
 	})
 }
+
+// answer replies to a command. In a group both the question and the answer
+// clear themselves away, so the topic stays a list of tasks; in a private
+// chat they stay, because there is nothing to keep tidy.
+func (b *Bot) answer(m *tele.Message, text string) error {
+	var sent *tele.Message
+	err := b.call("sendMessage", func() error {
+		msg, sendErr := b.api.Send(tele.ChatID(m.Chat.ID), text, &tele.SendOptions{
+			ThreadID:              m.ThreadID,
+			ParseMode:             tele.ModeHTML,
+			DisableWebPagePreview: true,
+			DisableNotification:   true,
+		})
+		sent = msg
+		return sendErr
+	})
+	if err != nil {
+		return err
+	}
+
+	ttl := b.cfg.UI.EphemeralTTL()
+	if ttl <= 0 || m.Private() {
+		return nil
+	}
+
+	b.after(ttl, func() {
+		if err := b.deleteMessage(m.Chat.ID, int64(m.ID)); err != nil {
+			b.log.Debug("could not remove command", "error", err)
+		}
+		if sent != nil {
+			if err := b.deleteMessage(m.Chat.ID, int64(sent.ID)); err != nil {
+				b.log.Debug("could not remove answer", "error", err)
+			}
+		}
+	})
+	return nil
+}

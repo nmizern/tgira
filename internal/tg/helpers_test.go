@@ -2,6 +2,8 @@ package tg
 
 import (
 	"strconv"
+
+	"github.com/nmizern/tgira/internal/store"
 )
 
 func itoa(v int) string { return strconv.Itoa(v) }
@@ -16,4 +18,8 @@ func toStr(v any) string {
 		return s
 	}
 	return ""
+}
+
+func storeFilterOpen(boardID int64) store.Filter {
+	return store.Filter{BoardID: boardID, Statuses: openStatuses}
 }
