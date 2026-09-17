@@ -1,0 +1,7 @@
+/tgira
+/dist/
+config.yaml
+*.db
+*.db-wal
+*.db-shm
+.env
