@@ -104,6 +104,8 @@ func (b *Bot) applyStatus(ctx context.Context, board domain.Board, task domain.T
 	if err := b.updateCard(ctx, board, task); err != nil {
 		return task, fmt.Errorf("redraw card: %w", err)
 	}
+
+	b.touchBoard(board.ID)
 	return task, nil
 }
 

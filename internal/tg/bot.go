@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"sync"
 	"time"
 
 	"github.com/nmizern/tgira/internal/config"
@@ -33,9 +34,12 @@ type Bot struct {
 	boards map[threadKey]domain.Board
 	byID   map[int64]domain.Board
 	ctx    context.Context
-	now    func() time.Time
-	sleep  func(time.Duration)
-	after  func(time.Duration, func())
+	pins   sync.Map // board id -> *pin
+
+	now      func() time.Time
+	sleep    func(time.Duration)
+	after    func(time.Duration, func())
+	schedule func(time.Duration, func())
 }
 
 // New dials Telegram and wires the handlers.
@@ -68,17 +72,18 @@ func New(cfg config.Config, st *store.Store, log *slog.Logger) (*Bot, error) {
 
 func newBot(cfg config.Config, st *store.Store, log *slog.Logger, api *tele.Bot) *Bot {
 	b := &Bot{
-		api:    api,
-		store:  st,
-		cfg:    cfg,
-		texts:  i18n.Get(cfg.Locale),
-		log:    log,
-		boards: map[threadKey]domain.Board{},
-		byID:   map[int64]domain.Board{},
-		ctx:    context.Background(),
-		now:    time.Now,
-		sleep:  time.Sleep,
-		after:  func(d time.Duration, f func()) { time.AfterFunc(d, f) },
+		api:      api,
+		store:    st,
+		cfg:      cfg,
+		texts:    i18n.Get(cfg.Locale),
+		log:      log,
+		boards:   map[threadKey]domain.Board{},
+		byID:     map[int64]domain.Board{},
+		ctx:      context.Background(),
+		now:      time.Now,
+		sleep:    time.Sleep,
+		after:    func(d time.Duration, f func()) { time.AfterFunc(d, f) },
+		schedule: func(d time.Duration, f func()) { time.AfterFunc(d, f) },
 	}
 	b.api.Handle(tele.OnText, b.onMessage)
 	b.api.Handle(tele.OnMedia, b.onMessage)
@@ -97,6 +102,12 @@ func (b *Bot) Start(ctx context.Context) error {
 		<-ctx.Done()
 		b.api.Stop()
 	}()
+
+	for id := range b.byID {
+		if err := b.flushBoard(ctx, id); err != nil {
+			b.log.Warn("could not draw board at startup", "error", err)
+		}
+	}
 
 	b.log.Info("listening", "boards", len(b.boards))
 	b.api.Start()
