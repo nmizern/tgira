@@ -225,7 +225,3 @@ To update the golden files after changing what a card looks like:
 ```sh
 go test ./internal/render -update
 ```
-
-## Licence
-
-MIT.
