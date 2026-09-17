@@ -29,6 +29,8 @@ func (b *Bot) registerCommands() {
 	b.api.Handle("/pri", b.cmdPriority)
 	b.api.Handle("/edit", b.cmdEdit)
 	b.api.Handle("/rm", b.cmdRemove)
+	b.api.Handle("/export", b.cmdExport)
+	b.api.Handle("/stats", b.cmdStats)
 }
 
 // whereami answers anywhere, because its whole point is to help set the
@@ -39,7 +41,17 @@ func (b *Bot) cmdWhereAmI(c tele.Context) error {
 }
 
 func (b *Bot) cmdHelp(c tele.Context) error {
-	return b.answer(c.Message(), b.texts.T(i18n.KeyHelp))
+	m := c.Message()
+	// /start in a private chat is how the bot learns where to write back.
+	if m.Private() && m.Sender != nil {
+		if err := b.store.UpsertUser(b.ctx, userOf(m.Sender)); err != nil {
+			return err
+		}
+		if err := b.store.SetDMChat(b.ctx, m.Sender.ID, m.Chat.ID); err != nil {
+			return err
+		}
+	}
+	return b.answer(m, b.texts.T(i18n.KeyHelp))
 }
 
 func (b *Bot) cmdBoard(c tele.Context) error {

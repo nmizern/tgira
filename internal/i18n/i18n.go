@@ -33,6 +33,10 @@ const (
 	KeyBadArguments = "error.bad_arguments"
 	KeyOnlyAuthor   = "error.only_author"
 	KeyRemoved      = "cmd.removed"
+	KeyNotAMember   = "error.not_a_member"
+	KeyStatsHeader  = "stats.header"
+	KeyStatsLine    = "stats.line"
+	KeyExportReady  = "cmd.export_ready"
 )
 
 // Strings is the set of texts for one language.
@@ -103,6 +107,10 @@ var english = table{
 		KeyBadArguments: "Usage: %s",
 		KeyOnlyAuthor:   "Only the author can remove %s.",
 		KeyRemoved:      "%s is gone.",
+		KeyNotAMember:   "You are not in the chat this board belongs to.",
+		KeyStatsHeader:  "%s · %s",
+		KeyStatsLine:    "%s · created %d · closed %d",
+		KeyExportReady:  "%s, %d tasks.",
 		KeyHelp: "Write anything in this topic and it becomes a task.\n" +
 			"A lone 1, 2 or 3 at either end sets the priority, @name assigns it, #word tags it.\n\n" +
 			"👀 take it · 👍 done · 👎 cancelled — as a reaction on the card or as a button.\n\n" +
@@ -141,6 +149,10 @@ var russian = table{
 		KeyBadArguments: "Как пользоваться: %s",
 		KeyOnlyAuthor:   "Удалить %s может только автор.",
 		KeyRemoved:      "%s удалена.",
+		KeyNotAMember:   "Вас нет в чате, которому принадлежит эта доска.",
+		KeyStatsHeader:  "%s · %s",
+		KeyStatsLine:    "%s · создано %d · закрыто %d",
+		KeyExportReady:  "%s, задач: %d.",
 		KeyHelp: "Напишите что угодно в этот тред — появится задача.\n" +
 			"Отдельная 1, 2 или 3 в начале или конце задаёт приоритет, @имя назначает исполнителя, #слово ставит тег.\n\n" +
 			"👀 беру · 👍 готово · 👎 отменено — реакцией на карточке или кнопкой.\n\n" +

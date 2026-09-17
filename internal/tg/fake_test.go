@@ -2,6 +2,7 @@ package tg
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -32,10 +33,11 @@ type fakeAPI struct {
 	failures map[string]string
 	nextID   int
 	lastMsg  int
+	role     string
 }
 
 func newFakeAPI(t *testing.T) *fakeAPI {
-	f := &fakeAPI{failures: map[string]string{}, nextID: 5000}
+	f := &fakeAPI{failures: map[string]string{}, nextID: 5000, role: "member"}
 	f.srv = httptest.NewServer(http.HandlerFunc(f.serve))
 	t.Cleanup(f.srv.Close)
 	return f
@@ -45,7 +47,24 @@ func (f *fakeAPI) serve(w http.ResponseWriter, r *http.Request) {
 	method := r.URL.Path[strings.LastIndex(r.URL.Path, "/")+1:]
 
 	params := map[string]any{}
-	_ = json.NewDecoder(r.Body).Decode(&params)
+	if strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/") {
+		// documents are uploaded as a form, everything else is JSON
+		if err := r.ParseMultipartForm(8 << 20); err == nil {
+			for key, values := range r.MultipartForm.Value {
+				params[key] = values[0]
+			}
+			for key, files := range r.MultipartForm.File {
+				params[key+"_filename"] = files[0].Filename
+				if opened, err := files[0].Open(); err == nil {
+					body, _ := io.ReadAll(opened)
+					opened.Close()
+					params[key+"_body"] = string(body)
+				}
+			}
+		}
+	} else {
+		_ = json.NewDecoder(r.Body).Decode(&params)
+	}
 
 	f.mu.Lock()
 	f.recorded = append(f.recorded, apiCall{Method: method, Params: params})
@@ -72,6 +91,20 @@ func (f *fakeAPI) serve(w http.ResponseWriter, r *http.Request) {
 	case "copyMessage":
 		f.remember(id)
 		writeJSON(w, okResult(map[string]any{"message_id": id}))
+
+	case "sendDocument":
+		f.remember(id)
+		writeJSON(w, okResult(map[string]any{
+			"message_id": id,
+			"chat":       map[string]any{"id": 0, "type": "private"},
+			"date":       0,
+		}))
+
+	case "getChatMember":
+		writeJSON(w, okResult(map[string]any{
+			"status": f.role,
+			"user":   map[string]any{"id": 0},
+		}))
 
 	default:
 		writeJSON(w, okResult(true))
@@ -150,4 +183,11 @@ func (f *fakeAPI) lastMessageID() int {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	return f.lastMsg
+}
+
+// setRole decides what getChatMember answers.
+func (f *fakeAPI) setRole(role string) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.role = role
 }
