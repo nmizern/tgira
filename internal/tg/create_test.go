@@ -242,3 +242,39 @@ func TestAttachmentThatCannotBeCopiedKeepsTheOriginal(t *testing.T) {
 	require.Empty(t, api.calls("deleteMessage"))
 	require.Equal(t, "710", api.last(t, "sendMessage").str("reply_to_message_id"))
 }
+
+// Telegram points every message in a forum topic at the topic's root message,
+// so the plain "has a reply" test would throw away the whole thread.
+func TestMessagesInATopicAreNotReplies(t *testing.T) {
+	b, api, st, board := newTestBot(t)
+
+	m := message(720, "добавить экспорт в csv")
+	m.ReplyTo = &tele.Message{
+		ID:       threadID,
+		ThreadID: threadID,
+		Chat:     &tele.Chat{ID: chatID, Type: tele.ChatSuperGroup},
+	}
+	feed(b, m)
+
+	task, err := st.TaskByNum(t.Context(), board.ID, 1)
+	require.NoError(t, err)
+	require.Equal(t, "добавить экспорт в csv", task.Title)
+	require.NotEmpty(t, api.calls("sendMessage"))
+}
+
+func TestReplyingToACardIsStillDiscussion(t *testing.T) {
+	b, _, st, board := newTestBot(t)
+	card := newTask(t, b, 721, "задача для обсуждения")
+
+	m := message(722, "да, согласен")
+	m.ReplyTo = &tele.Message{
+		ID:       int(card.CardMsgID),
+		ThreadID: threadID,
+		Chat:     &tele.Chat{ID: chatID, Type: tele.ChatSuperGroup},
+	}
+	feed(b, m)
+
+	tasks, err := st.Tasks(t.Context(), store.Filter{BoardID: board.ID})
+	require.NoError(t, err)
+	require.Len(t, tasks, 1)
+}
