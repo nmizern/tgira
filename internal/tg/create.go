@@ -26,7 +26,7 @@ func (b *Bot) onMessage(c tele.Context) error {
 		return nil
 	}
 	// Replies are the conversation under a card, not new work.
-	if m.ReplyTo != nil {
+	if isDiscussion(m) {
 		return nil
 	}
 	if m.Sender == nil || m.Sender.IsBot {
@@ -221,6 +221,17 @@ func shortCaption(title string) string {
 	}
 	return strings.ReplaceAll(strings.ReplaceAll(strings.ReplaceAll(
 		title, "&", "&amp;"), "<", "&lt;"), ">", "&gt;")
+}
+
+// isDiscussion reports whether a message answers something rather than asking
+// for something. Telegram points every message in a forum topic at that
+// topic's root message, so that one reference is not a reply at all — without
+// this the bot would ignore the entire thread.
+func isDiscussion(m *tele.Message) bool {
+	if m.ReplyTo == nil {
+		return false
+	}
+	return m.ReplyTo.ID != m.ThreadID
 }
 
 func messageText(m *tele.Message) (string, tele.Entities) {
