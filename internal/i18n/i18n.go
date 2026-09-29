@@ -16,6 +16,7 @@ const (
 	KeyBtnDone     = "btn.done"
 	KeyBtnTodo     = "btn.todo"
 	KeyBtnReopen   = "btn.reopen"
+	KeyBtnDelete   = "btn.delete"
 	KeyNoTasks     = "list.empty"
 	KeyNotAllowed  = "error.not_allowed"
 	KeyTaskGone    = "error.task_gone"
@@ -31,7 +32,6 @@ const (
 	KeyHelp         = "cmd.help"
 	KeyNoBoardHere  = "error.no_board"
 	KeyBadArguments = "error.bad_arguments"
-	KeyOnlyAuthor   = "error.only_author"
 	KeyRemoved      = "cmd.removed"
 	KeyNotAMember   = "error.not_a_member"
 	KeyStatsHeader  = "stats.header"
@@ -91,6 +91,7 @@ var english = table{
 		KeyBtnDone:     "✅ Done",
 		KeyBtnTodo:     "↩ To do",
 		KeyBtnReopen:   "↩ Reopen",
+		KeyBtnDelete:   "🗑",
 		KeyNoTasks:     "Nothing found.",
 		KeyNotAllowed:  "Only the author or the assignee can change %s.",
 		KeyTaskGone:    "That task is gone.",
@@ -105,7 +106,6 @@ var english = table{
 		KeyWhereAmI:     "Put these into the board config:",
 		KeyNoBoardHere:  "This topic is not a tgira board.",
 		KeyBadArguments: "Usage: %s",
-		KeyOnlyAuthor:   "Only the author can remove %s.",
 		KeyRemoved:      "%s is gone.",
 		KeyNotAMember:   "You are not in the chat this board belongs to.",
 		KeyStatsHeader:  "%s · %s",
@@ -133,6 +133,7 @@ var russian = table{
 		KeyBtnDone:     "✅ Готово",
 		KeyBtnTodo:     "↩ В очередь",
 		KeyBtnReopen:   "↩ Вернуть",
+		KeyBtnDelete:   "🗑",
 		KeyNoTasks:     "Ничего не нашлось.",
 		KeyNotAllowed:  "Менять %s может только автор или исполнитель.",
 		KeyTaskGone:    "Этой задачи больше нет.",
@@ -147,7 +148,6 @@ var russian = table{
 		KeyWhereAmI:     "Впишите это в конфиг доски:",
 		KeyNoBoardHere:  "Этот тред не является доской tgira.",
 		KeyBadArguments: "Как пользоваться: %s",
-		KeyOnlyAuthor:   "Удалить %s может только автор.",
 		KeyRemoved:      "%s удалена.",
 		KeyNotAMember:   "Вас нет в чате, которому принадлежит эта доска.",
 		KeyStatsHeader:  "%s · %s",

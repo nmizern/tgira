@@ -2,6 +2,7 @@ package tg
 
 import (
 	"strconv"
+	"strings"
 
 	"github.com/nmizern/tgira/internal/store"
 )
@@ -22,4 +23,18 @@ func toStr(v any) string {
 
 func storeFilterOpen(boardID int64) store.Filter {
 	return store.Filter{BoardID: boardID, Statuses: openStatuses}
+}
+
+// boardText is the latest thing the bot drew as the pinned board.
+func boardText(f *fakeAPI) string {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	out := ""
+	for _, c := range f.recorded {
+		if text, ok := c.Params["text"].(string); ok && strings.HasPrefix(text, "📋") {
+			out = text
+		}
+	}
+	return out
 }

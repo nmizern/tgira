@@ -88,6 +88,7 @@ func newBot(cfg config.Config, st *store.Store, log *slog.Logger, api *tele.Bot)
 	b.api.Handle(tele.OnText, b.onMessage)
 	b.api.Handle(tele.OnMedia, b.onMessage)
 	b.api.Handle(&tele.InlineButton{Unique: render.StatusAction}, b.onStatusButton)
+	b.api.Handle(&tele.InlineButton{Unique: render.DeleteAction}, b.onDeleteButton)
 	b.registerCommands()
 	return b
 }

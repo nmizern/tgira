@@ -7,8 +7,11 @@ import (
 	"github.com/nmizern/tgira/internal/i18n"
 )
 
-// StatusAction is the callback name every status button shares.
-const StatusAction = "status"
+// Callback names the card's buttons answer to.
+const (
+	StatusAction = "status"
+	DeleteAction = "remove"
+)
 
 // Button is one inline keyboard button, ready for the Telegram layer to wrap.
 type Button struct {
@@ -27,12 +30,18 @@ func Buttons(t domain.Task, l i18n.Strings) []Button {
 		}
 	}
 
+	remove := Button{
+		Text:   l.T(i18n.KeyBtnDelete),
+		Unique: DeleteAction,
+		Data:   strconv.FormatInt(t.ID, 10),
+	}
+
 	switch t.Status {
 	case domain.StatusTodo:
-		return []Button{move(i18n.KeyBtnTake, domain.StatusDoing), move(i18n.KeyBtnDone, domain.StatusDone)}
+		return []Button{move(i18n.KeyBtnTake, domain.StatusDoing), move(i18n.KeyBtnDone, domain.StatusDone), remove}
 	case domain.StatusDoing:
-		return []Button{move(i18n.KeyBtnDone, domain.StatusDone), move(i18n.KeyBtnTodo, domain.StatusTodo)}
+		return []Button{move(i18n.KeyBtnDone, domain.StatusDone), move(i18n.KeyBtnTodo, domain.StatusTodo), remove}
 	default:
-		return []Button{move(i18n.KeyBtnReopen, domain.StatusTodo)}
+		return []Button{move(i18n.KeyBtnReopen, domain.StatusTodo), remove}
 	}
 }

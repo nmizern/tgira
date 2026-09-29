@@ -11,7 +11,7 @@ mind a few more.
 🔴 TG-12 · doing
 Fix the redirect after the Google login
 👤 @ivan · #backend
-      [ ✅ Done ]  [ ↩ To do ]
+      [ ✅ Done ]  [ ↩ To do ]  [ 🗑 ]
 ```
 
 ## How it works
@@ -54,6 +54,12 @@ Either react to the card or press a button:
 | finished | 👍 (also 🎉 or 💯) | `Done` |
 | never mind | 👎 | — |
 | back to the queue | remove the reaction | `To do` / `Reopen` |
+| never should have been a ticket | — | `🗑` |
+
+The bin is deliberately open to everyone on the board: a message that should
+never have become a ticket is the team's mess, not its author's. Nothing is
+lost either way — the card leaves the thread, while the task and its history
+stay in the database and in every export, including who did the removing.
 
 Telegram allows a fixed set of reaction emoji and a check mark is not in it,
 which is why 👍 closes a task rather than ✅.
@@ -83,6 +89,11 @@ outcome instead: ✅ done, ⚫ cancelled.
 
 ## Commands
 
+**Reply to a card and the key can be left out** — `/edit new text` on a card
+means that card. Spell the key out (`/edit TG-1 new text`) and it wins over
+whatever you replied to; a bare number stays part of your text, so
+`/edit 1 fix the login` sets priority 1 rather than picking task 1.
+
 In the group, where the bot's answer and your command both clear themselves
 away after a minute:
 
@@ -97,7 +108,7 @@ away after a minute:
 | `/assign TG-1 @name` | hand it over |
 | `/pri TG-1 2` | change the priority, `-` clears it |
 | `/edit TG-1 new text` | rewrite the title, tags and priority |
-| `/rm TG-1` | remove it — the author's call alone |
+| `/rm TG-1` | remove it — anyone on the board may |
 | `/help` | the short version of this page |
 
 In a private chat with the bot, where nothing self-destructs:
