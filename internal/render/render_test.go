@@ -112,15 +112,18 @@ func TestButtons(t *testing.T) {
 	require.Equal(t, []Button{
 		{Text: "👀 Take", Unique: StatusAction, Data: "1:doing"},
 		{Text: "✅ Done", Unique: StatusAction, Data: "1:done"},
+		{Text: "🗑", Unique: DeleteAction, Data: "1"},
 	}, Buttons(todo, en))
 
 	require.Equal(t, []Button{
 		{Text: "✅ Done", Unique: StatusAction, Data: "2:done"},
 		{Text: "↩ To do", Unique: StatusAction, Data: "2:todo"},
+		{Text: "🗑", Unique: DeleteAction, Data: "2"},
 	}, Buttons(doing, en))
 
 	require.Equal(t, []Button{
 		{Text: "↩ Reopen", Unique: StatusAction, Data: "3:todo"},
+		{Text: "🗑", Unique: DeleteAction, Data: "3"},
 	}, Buttons(done, en))
 }
 

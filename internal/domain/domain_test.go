@@ -80,11 +80,6 @@ func TestAccess(t *testing.T) {
 
 	require.True(t, CanEdit(assigned, assignee))
 	require.False(t, CanEdit(assigned, stranger))
-
-	// deleting is the author's call alone
-	require.True(t, CanDelete(assigned, author))
-	require.False(t, CanDelete(assigned, assignee))
-	require.False(t, CanDelete(unassigned, stranger))
 }
 
 func TestAssignedByHandle(t *testing.T) {

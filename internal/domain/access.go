@@ -14,8 +14,6 @@ func CanEdit(t Task, actorID int64) bool {
 	return CanChangeStatus(t, actorID)
 }
 
-// CanDelete reports whether an actor may remove a task. Only the author may,
-// because a deleted card disappears for everyone.
-func CanDelete(t Task, actorID int64) bool {
-	return actorID == t.AuthorID
-}
+// Removing a task is deliberately open to everyone on the board: a message
+// that should never have become a ticket is the team's mess, not its author's.
+// Nothing is lost either way — the row and its history stay behind.

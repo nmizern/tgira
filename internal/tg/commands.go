@@ -63,6 +63,21 @@ func (b *Bot) cmdBoard(c tele.Context) error {
 		return b.answer(m, b.texts.T(i18n.KeyNoBoardHere))
 	}
 
+	// Every card is redrawn too, so a board that has drifted — after an
+	// upgrade that changed how cards look, say — is put right in one command.
+	tasks, err := b.store.Tasks(b.ctx, store.Filter{BoardID: board.ID})
+	if err != nil {
+		return err
+	}
+	for _, task := range tasks {
+		if task.CardMsgID == 0 {
+			continue
+		}
+		if err := b.updateCard(b.ctx, board, task); err != nil {
+			b.log.Warn("could not redraw card", "task", task.Key(board.Code), "error", err)
+		}
+	}
+
 	// Forget the old message so a fresh board is posted and pinned.
 	if err := b.store.SetPin(b.ctx, board.ID, 0); err != nil {
 		return err
@@ -110,7 +125,7 @@ func (b *Bot) cmdMy(c tele.Context) error {
 
 func (b *Bot) cmdShow(c tele.Context) error {
 	m := c.Message()
-	board, task, err := b.resolve(m, m.Payload)
+	board, task, _, err := b.target(m, m.Payload)
 	if err != nil {
 		return b.reportRef(m, err)
 	}
@@ -124,7 +139,7 @@ func (b *Bot) cmdShow(c tele.Context) error {
 
 func (b *Bot) cmdTake(c tele.Context) error {
 	m := c.Message()
-	board, task, err := b.resolve(m, m.Payload)
+	board, task, _, err := b.target(m, m.Payload)
 	if err != nil {
 		return b.reportRef(m, err)
 	}
@@ -156,15 +171,14 @@ func (b *Bot) cmdTake(c tele.Context) error {
 
 func (b *Bot) cmdAssign(c tele.Context) error {
 	m := c.Message()
-	ref, rest, _ := strings.Cut(strings.TrimSpace(m.Payload), " ")
-	handle := strings.TrimPrefix(strings.TrimSpace(rest), "@")
-	if handle == "" {
-		return b.answer(m, b.texts.T(i18n.KeyBadArguments, "/assign TG-1 @name"))
-	}
-
-	board, task, err := b.resolve(m, ref)
+	board, task, rest, err := b.target(m, m.Payload)
 	if err != nil {
 		return b.reportRef(m, err)
+	}
+
+	handle := strings.TrimPrefix(rest, "@")
+	if handle == "" {
+		return b.answer(m, b.texts.T(i18n.KeyBadArguments, "/assign TG-1 @name"))
 	}
 	if !domain.CanEdit(task, m.Sender.ID) {
 		return b.answer(m, b.texts.T(i18n.KeyNotAllowed, task.Key(board.Code)))
@@ -192,16 +206,14 @@ func (b *Bot) cmdAssign(c tele.Context) error {
 
 func (b *Bot) cmdPriority(c tele.Context) error {
 	m := c.Message()
-	ref, rest, _ := strings.Cut(strings.TrimSpace(m.Payload), " ")
-
-	priority, ok := parsePriority(strings.TrimSpace(rest))
-	if !ok {
-		return b.answer(m, b.texts.T(i18n.KeyBadArguments, "/pri TG-1 1|2|3|-"))
-	}
-
-	board, task, err := b.resolve(m, ref)
+	board, task, rest, err := b.target(m, m.Payload)
 	if err != nil {
 		return b.reportRef(m, err)
+	}
+
+	priority, ok := parsePriority(rest)
+	if !ok {
+		return b.answer(m, b.texts.T(i18n.KeyBadArguments, "/pri TG-1 1|2|3|-"))
 	}
 	if !domain.CanEdit(task, m.Sender.ID) {
 		return b.answer(m, b.texts.T(i18n.KeyNotAllowed, task.Key(board.Code)))
@@ -230,15 +242,12 @@ func (b *Bot) cmdPriority(c tele.Context) error {
 
 func (b *Bot) cmdEdit(c tele.Context) error {
 	m := c.Message()
-	ref, rest, _ := strings.Cut(strings.TrimSpace(m.Payload), " ")
-	rest = strings.TrimSpace(rest)
-	if rest == "" {
-		return b.answer(m, b.texts.T(i18n.KeyBadArguments, "/edit TG-1 new text"))
-	}
-
-	board, task, err := b.resolve(m, ref)
+	board, task, rest, err := b.target(m, m.Payload)
 	if err != nil {
 		return b.reportRef(m, err)
+	}
+	if rest == "" {
+		return b.answer(m, b.texts.T(i18n.KeyBadArguments, "/edit TG-1 new text"))
 	}
 	if !domain.CanEdit(task, m.Sender.ID) {
 		return b.answer(m, b.texts.T(i18n.KeyNotAllowed, task.Key(board.Code)))
@@ -276,32 +285,14 @@ func (b *Bot) cmdEdit(c tele.Context) error {
 
 func (b *Bot) cmdRemove(c tele.Context) error {
 	m := c.Message()
-	board, task, err := b.resolve(m, m.Payload)
+	board, task, _, err := b.target(m, m.Payload)
 	if err != nil {
 		return b.reportRef(m, err)
 	}
-	if !domain.CanDelete(task, m.Sender.ID) {
-		return b.answer(m, b.texts.T(i18n.KeyOnlyAuthor, task.Key(board.Code)))
-	}
 
-	if err := b.store.AddEvent(b.ctx, domain.Event{
-		TaskID:    task.ID,
-		ActorID:   m.Sender.ID,
-		Kind:      domain.EventDelete,
-		CreatedAt: b.now(),
-	}); err != nil {
+	if err := b.removeTask(b.ctx, board, task, m.Sender.ID); err != nil {
 		return err
 	}
-	if err := b.store.SoftDelete(b.ctx, task.ID, b.now()); err != nil {
-		return err
-	}
-
-	if task.CardMsgID != 0 {
-		if err := b.deleteMessage(board.ChatID, task.CardMsgID); err != nil {
-			b.log.Warn("could not remove card", "task", task.Key(board.Code), "error", err)
-		}
-	}
-	b.touchBoard(board.ID)
 	return b.answer(m, b.texts.T(i18n.KeyRemoved, task.Key(board.Code)))
 }
 
@@ -351,19 +342,41 @@ func (b *Bot) commandBoard(m *tele.Message) (domain.Board, bool) {
 
 var errNoBoard = errors.New("no board here")
 
-func (b *Bot) resolve(m *tele.Message, ref string) (domain.Board, domain.Task, error) {
+// target works out which task a command is about and hands back whatever is
+// left of its arguments. Replying to a card says which task you mean just as
+// clearly as typing its key, so the key may be left out.
+func (b *Bot) target(m *tele.Message, payload string) (domain.Board, domain.Task, string, error) {
 	board, ok := b.commandBoard(m)
 	if !ok {
-		return domain.Board{}, domain.Task{}, errNoBoard
+		return domain.Board{}, domain.Task{}, "", errNoBoard
 	}
 
-	num, ok := parseRef(ref, board.Code)
-	if !ok {
-		return board, domain.Task{}, store.ErrNotFound
+	card := repliedCard(m)
+
+	// Answering a card already says which task is meant, so only a fully
+	// spelled key overrides it — otherwise a leading "1" meant as a priority
+	// would be swallowed as a task number.
+	first, rest, _ := strings.Cut(strings.TrimSpace(payload), " ")
+	if num, ok := parseRef(first, board.Code, card != 0); ok {
+		task, err := b.store.TaskByNum(b.ctx, board.ID, num)
+		return board, task, strings.TrimSpace(rest), err
 	}
 
-	task, err := b.store.TaskByNum(b.ctx, board.ID, num)
-	return board, task, err
+	if card == 0 {
+		return board, domain.Task{}, "", store.ErrNotFound
+	}
+
+	task, err := b.store.TaskByCard(b.ctx, board.ID, card)
+	return board, task, strings.TrimSpace(payload), err
+}
+
+// repliedCard is the message a command answers, or zero when it answers
+// nothing. The topic's own root does not count — every message points at it.
+func repliedCard(m *tele.Message) int64 {
+	if !isDiscussion(m) {
+		return 0
+	}
+	return int64(m.ReplyTo.ID)
 }
 
 func (b *Bot) reportRef(m *tele.Message, err error) error {
@@ -401,14 +414,21 @@ func (b *Bot) listFilter(ctx context.Context, board domain.Board, arg string) (s
 	return filter, nil
 }
 
-// parseRef reads TG-12, tg-12, #12 or plain 12.
-func parseRef(arg, code string) (int64, bool) {
+// parseRef reads TG-12, tg-12, #12 or plain 12. With needPrefix only the
+// spelled-out form counts, which is what keeps a bare number in the text.
+func parseRef(arg, code string, needPrefix bool) (int64, bool) {
 	arg = strings.TrimPrefix(strings.TrimSpace(arg), "#")
+
+	prefixed := false
 	if i := strings.LastIndex(arg, "-"); i >= 0 {
 		if !strings.EqualFold(arg[:i], code) {
 			return 0, false
 		}
 		arg = arg[i+1:]
+		prefixed = true
+	}
+	if needPrefix && !prefixed {
+		return 0, false
 	}
 
 	num, err := strconv.ParseInt(arg, 10, 64)

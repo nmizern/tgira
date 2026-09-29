@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/nmizern/tgira/internal/domain"
+	"github.com/nmizern/tgira/internal/store"
 	"github.com/stretchr/testify/require"
 	tele "gopkg.in/telebot.v4"
 )
@@ -149,31 +150,43 @@ func TestEditRewritesEverythingTheTextCarries(t *testing.T) {
 	require.Equal(t, []string{"api"}, got.Tags)
 }
 
-func TestRemoveIsTheAuthorsCallAlone(t *testing.T) {
+// A message that should never have become a ticket is the team's mess, so
+// anybody on the board may clear it away.
+func TestAnyoneCanRemoveATask(t *testing.T) {
 	b, api, st, board := newTestBot(t)
 	task := newTask(t, b, 857, "ошибочная задача")
 
 	command(b, 858, "/rm TG-1", ivan())
+
 	_, err := st.Task(t.Context(), task.ID)
-	require.NoError(t, err)
-	require.Contains(t, api.last(t, "sendMessage").str("text"), "author")
+	require.ErrorIs(t, err, store.ErrNotFound)
 
-	command(b, 859, "/rm TG-1", author())
-	_, err = st.Task(t.Context(), task.ID)
-	require.Error(t, err)
-
-	// the card goes away with the task
 	removed := false
 	for _, call := range api.calls("deleteMessage") {
 		if call.str("message_id") == itoa(int(task.CardMsgID)) {
 			removed = true
 		}
 	}
-	require.True(t, removed)
+	require.True(t, removed, "the card goes away with the task")
 
 	tasks, err := st.Tasks(t.Context(), storeFilterOpen(board.ID))
 	require.NoError(t, err)
 	require.Empty(t, tasks)
+}
+
+// The history has to say who cleared it away.
+func TestRemovalIsRecordedWithItsActor(t *testing.T) {
+	b, _, st, _ := newTestBot(t)
+	task := newTask(t, b, 866, "уберём её")
+
+	command(b, 867, "/rm TG-1", ivan())
+
+	events, err := st.Events(t.Context(), task.ID)
+	require.NoError(t, err)
+	last := events[len(events)-1]
+	require.Equal(t, domain.EventDelete, last.Kind)
+	require.EqualValues(t, 200, last.ActorID)
+	require.Equal(t, domain.StatusTodo, last.From)
 }
 
 func TestAnUnknownTaskIsReportedPlainly(t *testing.T) {
@@ -247,4 +260,109 @@ func TestWhereAmIWorksWithoutAnyBoard(t *testing.T) {
 	command(b, 891, "/whereami", author())
 
 	require.Contains(t, api.last(t, "sendMessage").str("text"), "chat_id: -1001234567890")
+}
+
+func pressDelete(b *Bot, task domain.Task, sender *tele.User) {
+	b.Process(tele.Update{
+		ID: 910,
+		Callback: &tele.Callback{
+			ID:      "cb-rm",
+			Sender:  sender,
+			Message: &tele.Message{ID: int(task.CardMsgID), ThreadID: threadID, Chat: &tele.Chat{ID: chatID}},
+			Data:    "\fremove|" + itoa(int(task.ID)),
+		},
+	})
+}
+
+// replying to a card names the task, so the key can be left out
+func replyCommand(b *Bot, id int, text string, sender *tele.User, cardMsgID int64) {
+	m := message(id, text)
+	m.Sender = sender
+	m.ReplyTo = &tele.Message{ID: int(cardMsgID), ThreadID: threadID, Chat: &tele.Chat{ID: chatID}}
+	feed(b, m)
+}
+
+func TestDeleteButtonClearsTheTaskAway(t *testing.T) {
+	b, api, st, board := newTestBot(t)
+	task := newTask(t, b, 870, "случайно написал это в тред")
+
+	pressDelete(b, task, ivan())
+
+	_, err := st.Task(t.Context(), task.ID)
+	require.ErrorIs(t, err, store.ErrNotFound)
+	require.Equal(t, itoa(int(task.CardMsgID)), api.last(t, "deleteMessage").str("message_id"))
+	require.NotEmpty(t, api.calls("answerCallbackQuery"))
+
+	flushPending()
+	require.NotContains(t, boardText(api), "случайно написал")
+	require.Contains(t, boardText(api), "Nothing open")
+	_ = board
+}
+
+func TestDeleteButtonOnAGoneTaskIsHarmless(t *testing.T) {
+	b, api, st, _ := newTestBot(t)
+	task := newTask(t, b, 871, "уже удалённая")
+	require.NoError(t, st.SoftDelete(t.Context(), task.ID, day))
+
+	pressDelete(b, task, author())
+
+	require.Contains(t, api.last(t, "answerCallbackQuery").str("text"), "gone")
+}
+
+func TestCommandsTakeTheirTaskFromTheReply(t *testing.T) {
+	b, _, st, _ := newTestBot(t)
+	require.NoError(t, st.UpsertUser(t.Context(), domain.User{ID: 200, Username: "ivan"}))
+	task := newTask(t, b, 872, "исходный текст")
+
+	replyCommand(b, 873, "/edit 1 переписанный текст #api", author(), task.CardMsgID)
+	got, err := st.Task(t.Context(), task.ID)
+	require.NoError(t, err)
+	require.Equal(t, "переписанный текст", got.Title)
+	require.Equal(t, domain.PriorityHigh, got.Priority)
+	require.Equal(t, []string{"api"}, got.Tags)
+
+	replyCommand(b, 874, "/pri 3", author(), task.CardMsgID)
+	got, err = st.Task(t.Context(), task.ID)
+	require.NoError(t, err)
+	require.Equal(t, domain.PriorityLow, got.Priority)
+
+	replyCommand(b, 875, "/assign @ivan", author(), task.CardMsgID)
+	got, err = st.Task(t.Context(), task.ID)
+	require.NoError(t, err)
+	require.EqualValues(t, 200, got.AssigneeID)
+
+	replyCommand(b, 876, "/take", ivan(), task.CardMsgID)
+	got, err = st.Task(t.Context(), task.ID)
+	require.NoError(t, err)
+	require.Equal(t, domain.StatusDoing, got.Status)
+
+	replyCommand(b, 877, "/rm", ivan(), task.CardMsgID)
+	_, err = st.Task(t.Context(), task.ID)
+	require.ErrorIs(t, err, store.ErrNotFound)
+}
+
+func TestAnExplicitKeyBeatsTheReply(t *testing.T) {
+	b, _, st, _ := newTestBot(t)
+	first := newTask(t, b, 878, "первая")
+	second := newTask(t, b, 879, "вторая")
+
+	// replying to the first card but naming the second task
+	replyCommand(b, 880, "/pri TG-2 1", author(), first.CardMsgID)
+
+	gotFirst, err := st.Task(t.Context(), first.ID)
+	require.NoError(t, err)
+	require.Equal(t, domain.PriorityNone, gotFirst.Priority)
+
+	gotSecond, err := st.Task(t.Context(), second.ID)
+	require.NoError(t, err)
+	require.Equal(t, domain.PriorityHigh, gotSecond.Priority)
+}
+
+func TestACommandReplyingToSomethingElseIsReported(t *testing.T) {
+	b, api, _, _ := newTestBot(t)
+	newTask(t, b, 881, "задача")
+
+	replyCommand(b, 882, "/rm", author(), 999999)
+
+	require.Contains(t, api.last(t, "sendMessage").str("text"), "No task")
 }

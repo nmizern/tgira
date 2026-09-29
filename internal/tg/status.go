@@ -127,3 +127,62 @@ func parseStatusData(data string) (int64, domain.Status, bool) {
 	}
 	return taskID, status, true
 }
+
+func (b *Bot) onDeleteButton(c tele.Context) error {
+	cb := c.Callback()
+	if cb == nil || cb.Sender == nil {
+		return nil
+	}
+
+	taskID, err := strconv.ParseInt(strings.TrimSpace(cb.Data), 10, 64)
+	if err != nil {
+		return c.Respond(&tele.CallbackResponse{Text: b.texts.T(i18n.KeyTaskGone), ShowAlert: true})
+	}
+
+	task, err := b.store.Task(b.ctx, taskID)
+	if errors.Is(err, store.ErrNotFound) {
+		return c.Respond(&tele.CallbackResponse{Text: b.texts.T(i18n.KeyTaskGone), ShowAlert: true})
+	}
+	if err != nil {
+		return err
+	}
+
+	board, ok := b.byID[task.BoardID]
+	if !ok {
+		return c.Respond(&tele.CallbackResponse{Text: b.texts.T(i18n.KeyTaskGone), ShowAlert: true})
+	}
+
+	if err := b.store.UpsertUser(b.ctx, userOf(cb.Sender)); err != nil {
+		return err
+	}
+	if err := b.removeTask(b.ctx, board, task, cb.Sender.ID); err != nil {
+		return err
+	}
+	return c.Respond(&tele.CallbackResponse{Text: b.texts.T(i18n.KeyRemoved, task.Key(board.Code))})
+}
+
+// removeTask takes a task out of the thread while keeping everything that was
+// ever recorded about it, including who did the removing.
+func (b *Bot) removeTask(ctx context.Context, board domain.Board, task domain.Task, actorID int64) error {
+	at := b.now()
+	if err := b.store.AddEvent(ctx, domain.Event{
+		TaskID:    task.ID,
+		ActorID:   actorID,
+		Kind:      domain.EventDelete,
+		From:      task.Status,
+		CreatedAt: at,
+	}); err != nil {
+		return err
+	}
+	if err := b.store.SoftDelete(ctx, task.ID, at); err != nil {
+		return err
+	}
+
+	if task.CardMsgID != 0 {
+		if err := b.deleteMessage(board.ChatID, task.CardMsgID); err != nil {
+			b.log.Warn("could not remove card", "task", task.Key(board.Code), "error", err)
+		}
+	}
+	b.touchBoard(board.ID)
+	return nil
+}
