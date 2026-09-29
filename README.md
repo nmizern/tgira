@@ -100,7 +100,7 @@ away after a minute:
 | Command | What it does |
 |---|---|
 | `/whereami` | prints `chat_id` and `thread_id` for the config |
-| `/board` | rebuilds and re-pins the board |
+| `/board` | redraws every card and re-pins the board |
 | `/tasks [todo\|doing\|done\|cancelled\|all\|@name\|#tag]` | lists tasks, open ones by default |
 | `/my` | what is assigned to you |
 | `/show TG-1` | the card plus everything that happened to it |

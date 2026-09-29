@@ -97,3 +97,21 @@ func TestClosedTasksLeaveTheBoard(t *testing.T) {
 	require.NotContains(t, drawn, "закроем её")
 	require.Contains(t, drawn, "Nothing open")
 }
+
+// An upgrade can change what a card looks like, so /board is also the way to
+// bring every existing card up to date.
+func TestBoardCommandRedrawsEveryCard(t *testing.T) {
+	b, api, _, _ := newTestBot(t)
+	first := newTask(t, b, 890, "первая")
+	second := newTask(t, b, 891, "вторая")
+	flushPending()
+
+	command(b, 892, "/board", author())
+
+	edited := map[string]bool{}
+	for _, call := range api.calls("editMessageText") {
+		edited[call.str("message_id")] = true
+	}
+	require.True(t, edited[itoa(int(first.CardMsgID))])
+	require.True(t, edited[itoa(int(second.CardMsgID))])
+}

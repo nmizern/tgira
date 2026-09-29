@@ -63,6 +63,21 @@ func (b *Bot) cmdBoard(c tele.Context) error {
 		return b.answer(m, b.texts.T(i18n.KeyNoBoardHere))
 	}
 
+	// Every card is redrawn too, so a board that has drifted — after an
+	// upgrade that changed how cards look, say — is put right in one command.
+	tasks, err := b.store.Tasks(b.ctx, store.Filter{BoardID: board.ID})
+	if err != nil {
+		return err
+	}
+	for _, task := range tasks {
+		if task.CardMsgID == 0 {
+			continue
+		}
+		if err := b.updateCard(b.ctx, board, task); err != nil {
+			b.log.Warn("could not redraw card", "task", task.Key(board.Code), "error", err)
+		}
+	}
+
 	// Forget the old message so a fresh board is posted and pinned.
 	if err := b.store.SetPin(b.ctx, board.ID, 0); err != nil {
 		return err
