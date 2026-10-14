@@ -7,13 +7,6 @@ learn, nothing to open, no second place to keep the work.
 Self-hosted, single binary, SQLite. Built for a team of three; it will not
 mind a few more.
 
-```
-🔴 TG-12 · doing
-Fix the redirect after the Google login
-👤 @ivan · #backend
-      [ ✅ Done ]  [ ↩ To do ]  [ 🗑 ]
-```
-
 ## How it works
 
 Every message in a watched topic becomes a task. The bot deletes what you
